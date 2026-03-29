@@ -20,159 +20,70 @@ if not exist "%SD%lib\camera_mod.py" (
 :: ============================================================
 :: PYTHON CHECK
 :: ============================================================
-set "PYTHON=%SD%python\python.exe"
-if not exist "%PYTHON%" (
+set "PYTHON="
+
+:: Try Python Launcher first (py -3), then python on PATH
+where py >nul 2>nul
+if not errorlevel 1 (
+    py -3 --version >nul 2>nul
+    if not errorlevel 1 set "PYTHON=py -3"
+)
+if "!PYTHON!"=="" (
+    where python >nul 2>nul
+    if not errorlevel 1 (
+        python --version >nul 2>nul
+        if not errorlevel 1 set "PYTHON=python"
+    )
+)
+if "!PYTHON!"=="" (
     echo.
-    echo   ERROR: Embedded Python not found at:
-    echo   %PYTHON%
+    echo   ERROR: Python 3 is not installed or not in PATH.
     echo.
-    echo   The python\ folder must be present alongside install.bat.
+    echo   Please install Python 3.10 or newer from:
+    echo   https://www.python.org/downloads/
+    echo.
+    echo   IMPORTANT: Check "Add python.exe to PATH" during install.
     echo.
     pause
     exit /b
 )
 
+:: Check required packages
+!PYTHON! -c "import cryptography, lz4" >nul 2>nul
+if errorlevel 1 (
+    echo.
+    echo   Installing required Python packages...
+    echo.
+    !PYTHON! -m pip install cryptography lz4
+    if errorlevel 1 (
+        echo.
+        echo   ERROR: Failed to install required packages.
+        echo   Try running manually: pip install cryptography lz4
+        echo.
+        pause
+        exit /b
+    )
+)
+
 :: ============================================================
-:: GAME DETECTION - Steam, Epic, Xbox/Game Pass, manual
+:: GAME DIRECTORY (mod folder must be inside the game folder)
 :: ============================================================
-set "GAMEDIR="
-set "PLATFORM=Unknown"
-
-:: Method 1: Check relative to script (mod inside game folder)
-for %%I in ("%SD%..") do set "UP=%%~fI"
-if exist "%UP%\bin64\CrimsonDesert.exe" (
-    set "GAMEDIR=%UP%"
-    set "PLATFORM=Local"
-)
-
-:: Method 2: Steam - Registry + library folders
-if "!GAMEDIR!"=="" (
-    for /f "tokens=2*" %%A in ('reg query "HKCU\Software\Valve\Steam" /v SteamPath 2^>nul') do (
-        set "STEAMPATH=%%B"
-        set "STEAMPATH=!STEAMPATH:/=\!"
-        if exist "!STEAMPATH!\steamapps\common\Crimson Desert\bin64\CrimsonDesert.exe" (
-            set "GAMEDIR=!STEAMPATH!\steamapps\common\Crimson Desert"
-            set "PLATFORM=Steam"
-        )
-        if "!GAMEDIR!"=="" if exist "!STEAMPATH!\steamapps\libraryfolders.vdf" (
-            for /f "tokens=2 delims=	 " %%P in ('findstr /C:"\"path\"" "!STEAMPATH!\steamapps\libraryfolders.vdf" 2^>nul') do (
-                set "LPATH=%%~P"
-                set "LPATH=!LPATH:\\=\!"
-                if exist "!LPATH!\steamapps\common\Crimson Desert\bin64\CrimsonDesert.exe" (
-                    if "!GAMEDIR!"=="" (
-                        set "GAMEDIR=!LPATH!\steamapps\common\Crimson Desert"
-                        set "PLATFORM=Steam"
-                    )
-                )
-            )
-        )
-    )
-)
-
-:: Method 3: Epic Games - Registry + manifests
-if "!GAMEDIR!"=="" (
-    for /f "tokens=2*" %%A in ('reg query "HKLM\SOFTWARE\WOW6432Node\Epic Games\EpicGamesLauncher" /v AppDataPath 2^>nul') do (
-        set "EPICDATA=%%B"
-        if exist "!EPICDATA!\Manifests" (
-            for /f "delims=" %%M in ('findstr /s /m /C:"Crimson Desert" "!EPICDATA!\Manifests\*.item" 2^>nul') do (
-                for /f "tokens=2 delims=:, " %%V in ('findstr /C:"InstallLocation" "%%M" 2^>nul') do (
-                    set "EPATH=%%~V"
-                    set "EPATH=!EPATH:\\=\!"
-                    set "EPATH=!EPATH:"=!"
-                    if exist "!EPATH!\bin64\CrimsonDesert.exe" (
-                        if "!GAMEDIR!"=="" (
-                            set "GAMEDIR=!EPATH!"
-                            set "PLATFORM=Epic"
-                        )
-                    )
-                )
-            )
-        )
-    )
-)
-
-:: Method 4: Xbox / Game Pass
-if "!GAMEDIR!"=="" (
-    for %%D in (C D E F G H I J K L M N O P Q R S T U V W X Y Z) do (
-        for %%P in (
-            "%%D:\XboxGames\Crimson Desert\Content"
-            "%%D:\XboxGames\Crimson Desert"
-            "%%D:\Xbox Games\Crimson Desert\Content"
-            "%%D:\Xbox Games\Crimson Desert"
-        ) do (
-            if exist %%P\bin64\CrimsonDesert.exe (
-                if "!GAMEDIR!"=="" (
-                    set "GAMEDIR=%%~P"
-                    set "PLATFORM=Xbox/GamePass"
-                )
-            )
-        )
-    )
-)
-
-:: Method 5: Brute force common paths
-if "!GAMEDIR!"=="" (
-    for %%D in (C D E F G H I J K L M N O P Q R S T U V W X Y Z) do (
-        for %%P in (
-            "%%D:\SteamLibrary\steamapps\common\Crimson Desert"
-            "%%D:\Steam\steamapps\common\Crimson Desert"
-            "%%D:\Games\Steam\steamapps\common\Crimson Desert"
-            "%%D:\Games\Crimson Desert"
-            "%%D:\Games\Epic Games\Crimson Desert"
-            "%%D:\Program Files (x86)\Steam\steamapps\common\Crimson Desert"
-            "%%D:\Program Files\Steam\steamapps\common\Crimson Desert"
-            "%%D:\Program Files\Epic Games\Crimson Desert"
-            "%%D:\Epic Games\Crimson Desert"
-        ) do (
-            if exist %%P\bin64\CrimsonDesert.exe (
-                if "!GAMEDIR!"=="" set "GAMEDIR=%%~P"
-            )
-        )
-    )
-)
-
-:: Manual path entry
-:ASKPATH
-if "!GAMEDIR!"=="" (
-    cls
-    echo.
-    echo  ============================================================
-    echo          CrimsonCamera - Camera Mod for Crimson Desert
-    echo  ============================================================
-    echo.
-    echo   Could not find Crimson Desert automatically.
-    echo.
-    echo   Please enter the full path to your Crimson Desert folder.
-    echo   This is the folder that contains the "bin64" subfolder.
-    echo.
-    echo   Example: D:\SteamLibrary\steamapps\common\Crimson Desert
-    echo.
-    set /p "GAMEDIR=  Path: "
-)
-if "!GAMEDIR!"=="" (
-    echo.
-    echo   No path entered. Cannot continue.
-    pause
-    goto :EOF
-)
-set "GAMEDIR=!GAMEDIR:"=!"
-if not exist "!GAMEDIR!\bin64\CrimsonDesert.exe" (
-    echo.
-    echo   ERROR: CrimsonDesert.exe not found in: !GAMEDIR!\bin64\
-    echo   Please check the path and try again.
-    echo.
-    set "GAMEDIR="
-    pause
-    goto ASKPATH
-)
+for %%I in ("%SD%..") do set "GAMEDIR=%%~fI"
 
 set "PAZ=!GAMEDIR!\0010\0.paz"
 if not exist "!PAZ!" (
     echo.
-    echo   ERROR: Game archive not found: !PAZ!
-    echo   Your game installation may be incomplete.
+    echo   ERROR: Game archive not found.
+    echo.
+    echo   This mod folder must be placed inside the Crimson Desert
+    echo   game directory, for example:
+    echo.
+    echo     Crimson Desert\CrimsonCamera\install.bat
+    echo.
+    echo   The "0010" folder should be next to this mod folder.
+    echo.
     pause
-    goto :EOF
+    exit /b
 )
 
 :: Write permission check
@@ -191,7 +102,7 @@ if errorlevel 1 (
     echo      uncheck "Read-only" ^> Apply to all subfolders
     echo.
     pause
-    goto :EOF
+    exit /b
 )
 
 :: ============================================================
@@ -344,7 +255,7 @@ if defined STEADYCAM (echo   Steadycam: ON) else (echo   Steadycam: OFF)
 echo.
 echo  ---- Step 5 of 5: Combat Camera ----
 echo.
-echo   Zoom out more during lock-on combat?
+echo   Zoom out more during combat?
 echo.
 echo   [0] Default - No change to combat camera
 echo   [1] Wider   - More room to see enemies
@@ -402,7 +313,7 @@ echo   Game: !GAMEDIR!
 echo   Args: !PYARGS!
 echo.
 
-"%PYTHON%" "%SD%lib\camera_mod.py" "!GAMEDIR!" !PYARGS!
+!PYTHON! "%SD%lib\camera_mod.py" "!GAMEDIR!" !PYARGS!
 
 if errorlevel 1 (
     echo.
@@ -448,7 +359,7 @@ set /p "RC=  Continue? [Y/N]: "
 if /i not "!RC!"=="Y" goto STEP1
 
 echo.
-"%PYTHON%" "%SD%lib\camera_mod.py" "!GAMEDIR!" --restore
+!PYTHON! "%SD%lib\camera_mod.py" "!GAMEDIR!" --restore
 
 if errorlevel 1 (
     echo.
