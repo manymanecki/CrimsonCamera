@@ -1,0 +1,5 @@
+backups/*
+lib/__pycache__
+lib/__pycache__/*
+python/
+_vanilla_dump.xml
