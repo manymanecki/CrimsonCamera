@@ -649,16 +649,32 @@ def _match_compressed_size(plaintext: bytes, target_comp_size: int,
             f"Cannot match target comp_size {target_comp_size} "
             f"(got {len(comp)}, delta {delta}): exhausted all candidates")
 
-    # We overshot at position n. Try reverting the last few replacements
-    # one at a time to find the exact target.
-    for revert_count in range(1, min(n + 2, 200)):
-        # Revert the last `revert_count` replacements
-        trial2 = bytearray(padded)
-        for pos in candidates[:n + 1 - revert_count]:
-            trial2[pos] = 0x20
-        c = len(lz4.block.compress(bytes(trial2), store_size=False))
+    # We overshot at position n: candidates[:n+1] replaced → comp < target.
+    # The single replacement at candidates[n] caused LZ4's output to jump
+    # past the target — byte-level space replacement is too coarse here.
+    #
+    # Fix: use the inflate strategies (binary-search on incompressible
+    # content in XML comments / whitespace runs) to fine-tune the compressed
+    # size upward from this more-compressible baseline.  Try increasing
+    # amounts of space replacement to give the inflate strategies different
+    # whitespace patterns and headroom to work with.
+    for level in (n + 1, n + 50, n + 200, len(candidates)):
+        level = min(level, len(candidates))
+        overshot_trial = bytearray(padded)
+        for pos in candidates[:level]:
+            overshot_trial[pos] = 0x20
+        overshot_data = bytes(overshot_trial)
+        c = len(lz4.block.compress(overshot_data, store_size=False))
         if c == target_comp_size:
-            return bytes(trial2)
+            return overshot_data
+        if c >= target_comp_size:
+            continue
+        result = _inflate_by_replacing_comment_bodies(overshot_data, target_comp_size)
+        if result is not None:
+            return result
+        result = _inflate_by_replacing_whitespace_runs(overshot_data, target_comp_size)
+        if result is not None:
+            return result
 
     raise ValueError(
         f"Cannot match target comp_size {target_comp_size} "
