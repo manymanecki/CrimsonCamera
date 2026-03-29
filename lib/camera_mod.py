@@ -25,7 +25,7 @@ import lz4.block
 from camera_rules import build_modifications
 
 
-# ── XML modification engine ────────────────────────────────────────
+# XML modification engine
 
 TAG_RE = re.compile(r'<(\w+)\s+([^>]*?)(/?)>')
 
@@ -219,7 +219,7 @@ def strip_header_comments(xml_text):
     return '\n'.join(result)
 
 
-# ── Backup management ──────────────────────────────────────────────
+# Backup management
 
 def _backups_dir():
     return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -265,7 +265,7 @@ def _get_vanilla_xml(entry):
     return xml_bytes.rstrip(b'\x00').decode('utf-8-sig')
 
 
-# ── PAZ writing ────────────────────────────────────────────────────
+# PAZ writing
 
 def _write_to_paz(entry, encrypted_bytes):
     """Write encrypted bytes to the PAZ file at the entry's offset."""
@@ -279,7 +279,7 @@ def _write_to_paz(entry, encrypted_bytes):
     os.utime(paz_path, (stat_before.st_atime, stat_before.st_mtime))
 
 
-# ── Main operations ────────────────────────────────────────────────
+# Main operations
 
 def _find_camera_entry(game_dir):
     """Parse PAMT and find the playercamerapreset.xml entry."""
@@ -372,7 +372,7 @@ def restore_camera(game_dir):
     return {'status': 'ok'}
 
 
-# ── CLI ────────────────────────────────────────────────────────────
+# CLI
 
 def main():
     parser = argparse.ArgumentParser(description='CrimsonCamera mod tool')

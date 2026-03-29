@@ -143,7 +143,7 @@ def parse_pamt(pamt_path: str, paz_dir: str = None) -> list[PazEntry]:
     return entries
 
 
-# ── CLI ──────────────────────────────────────────────────────────────
+# CLI
 
 def main():
     import argparse

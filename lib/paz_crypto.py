@@ -18,7 +18,7 @@ import struct
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
 import lz4.block
 
-# ── Key derivation constants ─────────────────────────────────────────
+# Key derivation constants
 
 HASH_INITVAL = 0x000C5EDE
 IV_XOR = 0x60616263
@@ -28,7 +28,7 @@ XOR_DELTAS = [
 ]
 
 
-# ── Bob Jenkins' lookup3 hashlittle ──────────────────────────────────
+# Bob Jenkins' lookup3 hashlittle
 
 def _rot(v, k):
     return ((v << k) | (v >> (32 - k))) & 0xFFFFFFFF
@@ -91,7 +91,7 @@ def hashlittle(data: bytes, initval: int = 0) -> int:
     return c
 
 
-# ── Key derivation ───────────────────────────────────────────────────
+# Key derivation
 
 def derive_key_iv(filename: str) -> tuple[bytes, bytes]:
     """Derive 32-byte ChaCha20 key and 16-byte IV from a filename.
@@ -110,7 +110,7 @@ def derive_key_iv(filename: str) -> tuple[bytes, bytes]:
     return key, iv
 
 
-# ── ChaCha20 encrypt/decrypt ────────────────────────────────────────
+# ChaCha20 encrypt/decrypt
 
 def chacha20(data: bytes, key: bytes, iv: bytes) -> bytes:
     """ChaCha20 encrypt or decrypt (symmetric — same operation both ways)."""
@@ -129,7 +129,7 @@ def encrypt(data: bytes, filename: str) -> bytes:
     return decrypt(data, filename)
 
 
-# ── LZ4 compression ─────────────────────────────────────────────────
+# LZ4 compression
 
 def lz4_decompress(data: bytes, original_size: int) -> bytes:
     """LZ4 block decompression (no frame header)."""

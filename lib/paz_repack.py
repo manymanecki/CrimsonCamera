@@ -41,7 +41,7 @@ from paz_parse import parse_pamt, PazEntry
 from paz_crypto import encrypt, lz4_compress
 
 
-# ── Timestamp preservation (Windows) ────────────────────────────────
+# Timestamp preservation (Windows)
 
 def _save_timestamps(path: str):
     """Capture NTFS timestamps. Returns a callable to restore them."""
@@ -75,7 +75,7 @@ def _save_timestamps(path: str):
     return restore
 
 
-# ── Size matching ────────────────────────────────────────────────────
+# Size matching
 
 def _pad_to_orig_size(data: bytes, orig_size: int) -> bytes:
     """Pad data to exactly orig_size bytes with zero bytes."""
@@ -242,7 +242,7 @@ def _inflate_with_comments(padded: bytes, plaintext_len: int,
     if needed <= 0:
         return None
 
-    # ── Strategy 1: replace zero bytes in padding with spaces ──────────
+    # Strategy 1: replace zero bytes in padding with spaces
     if padding_available > 0:
         max_replaceable = padding_available
 
@@ -269,7 +269,7 @@ def _inflate_with_comments(padded: bytes, plaintext_len: int,
                 if len(lz4.block.compress(trial, store_size=False)) == target_comp_size:
                     return trial
 
-    # ── Strategy 2: single XML comment in trailing padding ─────────────
+    # Strategy 2: single XML comment in trailing padding
     if padding_available >= 8:
         max_body = padding_available - 7  # 7 = len("<!---->")
         rand_body = _make_xml_safe_incompressible(max_body)
@@ -303,7 +303,7 @@ def _inflate_with_comments(padded: bytes, plaintext_len: int,
                 if len(lz4.block.compress(trial, store_size=False)) == target_comp_size:
                     return trial
 
-    # ── Strategy 3: distribute comments across newline positions ───────
+    # Strategy 3: distribute comments across newline positions
     # Insert incompressible XML comments at newline positions throughout
     # the file body. Each inserted byte displaces one byte of content off
     # the tail (which gets trimmed to stay within orig_size).
@@ -681,7 +681,7 @@ def _match_compressed_size(plaintext: bytes, target_comp_size: int,
         f"(got {len(comp)}, delta {delta})")
 
 
-# ── Core repack ──────────────────────────────────────────────────────
+# Core repack
 
 def repack_entry(modified_path: str, entry: PazEntry,
                  output_path: str = None, dry_run: bool = False) -> dict:
@@ -757,7 +757,7 @@ def repack_entry(modified_path: str, entry: PazEntry,
     return result
 
 
-# ── CLI ──────────────────────────────────────────────────────────────
+# CLI
 
 def find_entry(entries: list[PazEntry], entry_path: str) -> PazEntry:
     """Find a PAMT entry by path (case-insensitive, partial match)."""

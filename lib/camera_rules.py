@@ -15,7 +15,7 @@ class ModificationSet:
     distance_multiplier: float = 1.0
 
 
-# ── Height layers ──────────────────────────────────────────────────
+# Height layers
 
 _BASIC_SECTIONS = [
     'Player_Basic_Default',
@@ -93,7 +93,7 @@ def _build_height_mods(height):
     return mods
 
 
-# ── Centered layer ─────────────────────────────────────────────────
+# Centered layer
 
 def _build_centered_mods():
     mods = {}
@@ -104,7 +104,7 @@ def _build_centered_mods():
     return mods
 
 
-# ── Steadycam layer ────────────────────────────────────────────────
+# Steadycam layer
 
 _STEADYCAM_NORMALIZE_SECTIONS = [
     'Player_Basic_Default_Walk',
@@ -252,7 +252,7 @@ _STEADYCAM_MODS = {
 }
 
 
-# ── Combat zoom layers ─────────────────────────────────────────────
+# Combat zoom layers
 
 _COMBAT_WEAPON_SECTIONS = _WEAPON_SECTIONS + [
     'Player_Weapon_Rush',
@@ -401,7 +401,7 @@ _COMBAT_LOCKON_LAYERS = {
 }
 
 
-# ── Horse offset normalisation ─────────────────────────────────────
+# Horse offset normalisation
 # Vanilla Dash has lower RightOffset than other horse states, causing a
 # visible lateral shift during speed transitions.  Normalise to match.
 
@@ -415,7 +415,7 @@ _HORSE_OFFSET_FIX = {
 }
 
 
-# ── Composition ────────────────────────────────────────────────────
+# Composition
 
 def _merge(base, overlay):
     """Deep-merge overlay into base (overlay wins on conflict)."""
