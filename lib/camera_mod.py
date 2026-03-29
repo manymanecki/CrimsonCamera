@@ -36,6 +36,10 @@ SUBELEMENT_TAGS = frozenset({
 
 FOV_SECTION_TYPES = frozenset({'TPS', 'TwoTargetLockOn'})
 
+# Engine default FOV for entries that omit the Fov attribute (e.g.
+# Player_Ride_Horse_Run).  Derived from Player_Basic_Default Fov="40".
+DEFAULT_ENGINE_FOV = 40
+
 
 def _parse_attrs(attrs_str):
     return dict(re.findall(r'(\w+)="([^"]*)"', attrs_str))
@@ -109,12 +113,19 @@ def apply_modifications(xml_text, mod_set):
             applies_fov = attrs.get('Type') in FOV_SECTION_TYPES
 
             if tag not in SUBELEMENT_TAGS and tag != 'ZoomLevel':
-                if applies_fov and 'Fov' in attrs:
-                    modified_line = re.sub(
-                        r'Fov="[^"]*"',
-                        f'Fov="{fov_value}"',
-                        modified_line, count=1,
-                    )
+                if applies_fov:
+                    if 'Fov' in attrs:
+                        modified_line = re.sub(
+                            r'Fov="[^"]*"',
+                            f'Fov="{fov_value}"',
+                            modified_line, count=1,
+                        )
+                    else:
+                        modified_line = re.sub(
+                            r'(/?>)',
+                            f' Fov="{fov_value}"\\1',
+                            modified_line, count=1,
+                        )
             elif tag == 'ZoomLevel' and parent_applies_fov:
                 level_num = int(attrs.get('Level', '0'))
                 if level_num < 2:
@@ -166,7 +177,7 @@ def apply_modifications(xml_text, mod_set):
 
         if tag not in SUBELEMENT_TAGS and tag != 'ZoomLevel':
             applies_fov = attrs.get('Type') in FOV_SECTION_TYPES
-            original_fov = float(attrs.get('Fov', '0')) if applies_fov else 0
+            original_fov = float(attrs.get('Fov', str(DEFAULT_ENGINE_FOV))) if applies_fov else 0
             if not self_closing:
                 parent_stack.append((tag, applies_fov, original_fov))
 

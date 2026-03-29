@@ -401,6 +401,20 @@ _COMBAT_LOCKON_LAYERS = {
 }
 
 
+# ── Horse offset normalisation ─────────────────────────────────────
+# Vanilla Dash has lower RightOffset than other horse states, causing a
+# visible lateral shift during speed transitions.  Normalise to match.
+
+_HORSE_OFFSET_FIX = {
+    'Player_Ride_Horse_Dash/ZoomLevel[2]': {
+        'RightOffset': ('SET', '1.45'),
+    },
+    'Player_Ride_Horse_Dash/ZoomLevel[3]': {
+        'RightOffset': ('SET', '1.8'),
+    },
+}
+
+
 # ── Composition ────────────────────────────────────────────────────
 
 def _merge(base, overlay):
@@ -437,6 +451,7 @@ def build_modifications(style, height, fov, steadycam, combat, distance='default
     """
     mods = {}
 
+    _merge(mods, _HORSE_OFFSET_FIX)
     _merge(mods, _build_height_mods(height))
 
     if style == 'centered':
