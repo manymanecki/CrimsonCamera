@@ -50,6 +50,7 @@ def apply_modifications(xml_text, mod_set):
     """
     element_mods = mod_set.element_mods
     fov_value = mod_set.fov_value
+    distance_mult = mod_set.distance_multiplier
 
     lines = xml_text.split('\n')
     parent_stack = []
@@ -145,6 +146,21 @@ def apply_modifications(xml_text, mod_set):
                                 f'ZoomDistance="{new_zd}"',
                                 modified_line, count=1,
                             )
+
+        # Distance multiplier — scale ZoomDistance on ZoomLevel (Level >= 2)
+        if distance_mult != 1.0 and tag == 'ZoomLevel':
+            level_num = int(attrs.get('Level', '0'))
+            if level_num >= 2:
+                zd_match = re.search(r'ZoomDistance="([^"]*)"', modified_line)
+                if zd_match:
+                    current_zd = float(zd_match.group(1))
+                    if current_zd > 0:
+                        new_zd = round(current_zd * distance_mult, 2)
+                        modified_line = re.sub(
+                            r'ZoomDistance="[^"]*"',
+                            f'ZoomDistance="{new_zd}"',
+                            modified_line, count=1,
+                        )
 
         result.append(modified_line)
 
@@ -272,7 +288,7 @@ def _find_camera_entry(game_dir):
     sys.exit(1)
 
 
-def install_camera_mod(game_dir, style, height, fov, steadycam, combat):
+def install_camera_mod(game_dir, style, height, fov, steadycam, combat, distance='default'):
     """Apply camera modifications to the game."""
     print('  Finding camera entry...')
     entry = _find_camera_entry(game_dir)
@@ -289,7 +305,7 @@ def install_camera_mod(game_dir, style, height, fov, steadycam, combat):
     vanilla_xml = strip_header_comments(vanilla_xml)
 
     print('  Building modification rules...')
-    mod_set = build_modifications(style, height, fov, steadycam, combat)
+    mod_set = build_modifications(style, height, fov, steadycam, combat, distance)
     mod_count = sum(len(v) for v in mod_set.element_mods.values())
     print(f'  Rules: {mod_count} attribute changes'
           + (f', FoV={mod_set.fov_value}' if mod_set.fov_value else ''))
@@ -361,6 +377,10 @@ def main():
     parser.add_argument('--steadycam', action='store_true')
     parser.add_argument('--combat', choices=['default', 'wide', 'max'],
                         default='default')
+    parser.add_argument('--distance',
+                        choices=['vclose', 'close', 'default', 'far', 'vfar'],
+                        default='default',
+                        help='Camera distance preset')
 
     args = parser.parse_args()
 
@@ -372,7 +392,7 @@ def main():
             sys.exit(1)
         result = install_camera_mod(
             args.game_dir, args.style, args.height, args.fov,
-            args.steadycam, args.combat)
+            args.steadycam, args.combat, args.distance)
 
     sys.exit(0 if result.get('status') == 'ok' else 1)
 

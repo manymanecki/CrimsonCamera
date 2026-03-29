@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 class ModificationSet:
     element_mods: dict = field(default_factory=dict)
     fov_value: int = 0
+    distance_multiplier: float = 1.0
 
 
 # ── Height layers ──────────────────────────────────────────────────
@@ -411,7 +412,16 @@ def _merge(base, overlay):
             base[key] = dict(attrs)
 
 
-def build_modifications(style, height, fov, steadycam, combat):
+_DISTANCE_PRESETS = {
+    'vclose': 0.6,
+    'close':  0.8,
+    'default': 1.0,
+    'far':    1.25,
+    'vfar':   1.5,
+}
+
+
+def build_modifications(style, height, fov, steadycam, combat, distance='default'):
     """Build the complete modification set from user choices.
 
     Args:
@@ -420,9 +430,10 @@ def build_modifications(style, height, fov, steadycam, combat):
         fov: int 50-100 (0 = no change)
         steadycam: bool
         combat: 'default', 'wide', or 'max'
+        distance: 'vclose', 'close', 'default', 'far', or 'vfar'
 
     Returns:
-        ModificationSet with element_mods and fov_value
+        ModificationSet with element_mods, fov_value, and distance_multiplier
     """
     mods = {}
 
@@ -442,4 +453,7 @@ def build_modifications(style, height, fov, steadycam, combat):
         _merge(mods, _COMBAT_LOCKON_LAYERS[combat])
         _merge(mods, _build_combat_weapon_mods(combat))
 
-    return ModificationSet(element_mods=mods, fov_value=fov)
+    dist_mult = _DISTANCE_PRESETS.get(distance, 1.0)
+
+    return ModificationSet(element_mods=mods, fov_value=fov,
+                           distance_multiplier=dist_mult)

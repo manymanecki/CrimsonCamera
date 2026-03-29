@@ -112,6 +112,7 @@ if errorlevel 1 (
 :: Initialize defaults
 set "STYLE=shoulder"
 set "HEIGHT=medium"
+set "DISTANCE=default"
 set "FOV=0"
 set "STEADYCAM="
 set "COMBAT=default"
@@ -125,7 +126,7 @@ echo          CrimsonCamera - Camera Mod for Crimson Desert
 echo  ============================================================
 echo   Game: !GAMEDIR!
 echo.
-echo  ---- Step 1 of 5: Camera Style ----
+echo  ---- Step 1 of 6: Camera Style ----
 echo.
 echo   [1] Shoulder Camera (default-like)
 echo       Over-the-shoulder, vanilla positioning but lowered
@@ -150,11 +151,11 @@ goto STEP1
 cls
 echo.
 echo  ============================================================
-echo          CrimsonCamera - Step 2 of 5
+echo          CrimsonCamera - Step 2 of 6
 echo  ============================================================
 echo   Style: !STYLE!
 echo.
-echo  ---- Step 2 of 5: Camera Height ----
+echo  ---- Step 2 of 6: Camera Height ----
 echo.
 echo   How much should the camera be lowered?
 echo.
@@ -176,16 +177,46 @@ echo   Invalid choice.
 timeout /t 2 >nul
 goto STEP2
 
-:: ── Step 3: Field of View ─────────────────────────────────
+:: ── Step 3: Camera Distance ──────────────────────────────
 :STEP3
 cls
 echo.
 echo  ============================================================
-echo          CrimsonCamera - Step 3 of 5
+echo          CrimsonCamera - Step 3 of 6
 echo  ============================================================
 echo   Style: !STYLE!  /  Height: !HEIGHT!
 echo.
-echo  ---- Step 3 of 5: Field of View ----
+echo  ---- Step 3 of 6: Camera Distance ----
+echo.
+echo   How far should the camera be from the character?
+echo.
+echo   [1] Very Close  - 60%% of default distance
+echo   [2] Close       - 80%% of default distance
+echo   [3] Default     - No change (recommended)
+echo   [4] Far         - 125%% of default distance
+echo   [5] Very Far    - 150%% of default distance
+echo.
+set /p "S3D=  Choose [1, 2, 3, 4, 5]: "
+
+if "!S3D!"=="1" set "DISTANCE=vclose"& goto STEP4
+if "!S3D!"=="2" set "DISTANCE=close"& goto STEP4
+if "!S3D!"=="3" set "DISTANCE=default"& goto STEP4
+if "!S3D!"=="4" set "DISTANCE=far"& goto STEP4
+if "!S3D!"=="5" set "DISTANCE=vfar"& goto STEP4
+echo   Invalid choice.
+timeout /t 2 >nul
+goto STEP3
+
+:: ── Step 4: Field of View ─────────────────────────────────
+:STEP4
+cls
+echo.
+echo  ============================================================
+echo          CrimsonCamera - Step 4 of 6
+echo  ============================================================
+echo   Style: !STYLE!  /  Height: !HEIGHT!  /  Distance: !DISTANCE!
+echo.
+echo  ---- Step 4 of 6: Field of View ----
 echo.
 echo   The vanilla game uses about 40 degrees (feels narrow).
 echo   Enter a value between 50 and 100, or 0 for no change.
@@ -203,31 +234,31 @@ if "!S3!"=="" set "S3=0"
 set /a "FOVCHECK=!S3!" 2>nul
 if "!S3!"=="0" (
     set "FOV=0"
-    goto STEP4
+    goto STEP5
 )
 if !FOVCHECK! LSS 50 (
     echo   Value must be 0, or between 50 and 100.
     timeout /t 2 >nul
-    goto STEP3
+    goto STEP4
 )
 if !FOVCHECK! GTR 100 (
     echo   Value must be 0, or between 50 and 100.
     timeout /t 2 >nul
-    goto STEP3
+    goto STEP4
 )
 set "FOV=!FOVCHECK!"
-goto STEP4
+goto STEP5
 
-:: ── Step 4: Steadycam ─────────────────────────────────────
-:STEP4
+:: ── Step 5: Steadycam ─────────────────────────────────────
+:STEP5
 cls
 echo.
 echo  ============================================================
-echo          CrimsonCamera - Step 4 of 5
+echo          CrimsonCamera - Step 5 of 6
 echo  ============================================================
 echo   Style: !STYLE!  /  Height: !HEIGHT!  /  FoV: !FOV!
 echo.
-echo  ---- Step 4 of 5: Steadycam ----
+echo  ---- Step 5 of 6: Steadycam ----
 echo.
 echo   In vanilla, the camera bobs and sways when you run,
 echo   sprint, or ride. Steadycam smooths this out.
@@ -237,23 +268,23 @@ echo   [N] No  - Keep vanilla camera sway
 echo.
 set /p "S4=  Enable Steadycam? [Y/N]: "
 
-if /i "!S4!"=="Y" set "STEADYCAM=--steadycam"& goto STEP5
-if /i "!S4!"=="N" set "STEADYCAM="& goto STEP5
+if /i "!S4!"=="Y" set "STEADYCAM=--steadycam"& goto STEP6
+if /i "!S4!"=="N" set "STEADYCAM="& goto STEP6
 echo   Invalid choice.
 timeout /t 2 >nul
-goto STEP4
+goto STEP5
 
-:: ── Step 5: Combat Camera ─────────────────────────────────
-:STEP5
+:: ── Step 6: Combat Camera ─────────────────────────────────
+:STEP6
 cls
 echo.
 echo  ============================================================
-echo          CrimsonCamera - Step 5 of 5
+echo          CrimsonCamera - Step 6 of 6
 echo  ============================================================
 echo   Style: !STYLE!  /  Height: !HEIGHT!  /  FoV: !FOV!
 if defined STEADYCAM (echo   Steadycam: ON) else (echo   Steadycam: OFF)
 echo.
-echo  ---- Step 5 of 5: Combat Camera ----
+echo  ---- Step 6 of 6: Combat Camera ----
 echo.
 echo   Zoom out more during combat?
 echo.
@@ -268,7 +299,7 @@ if "!S5!"=="1" set "COMBAT=wide"& goto CONFIRM
 if "!S5!"=="2" set "COMBAT=max"& goto CONFIRM
 echo   Invalid choice.
 timeout /t 2 >nul
-goto STEP5
+goto STEP6
 
 :: ── Confirmation ──────────────────────────────────────────
 :CONFIRM
@@ -282,6 +313,7 @@ echo   Game:      !GAMEDIR!
 echo.
 echo   Style:     !STYLE!
 echo   Height:    !HEIGHT!
+echo   Distance:  !DISTANCE!
 if "!FOV!"=="0" (echo   FoV:       No change) else (echo   FoV:       !FOV! degrees)
 if defined STEADYCAM (echo   Steadycam: ON) else (echo   Steadycam: OFF)
 echo   Combat:    !COMBAT!
@@ -305,7 +337,7 @@ echo          CrimsonCamera - Installing...
 echo  ============================================================
 echo.
 
-set "PYARGS=--style !STYLE! --height !HEIGHT! --fov !FOV! --combat !COMBAT!"
+set "PYARGS=--style !STYLE! --height !HEIGHT! --distance !DISTANCE! --fov !FOV! --combat !COMBAT!"
 if defined STEADYCAM set "PYARGS=!PYARGS! --steadycam"
 
 echo   Running: python lib\camera_mod.py
