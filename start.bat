@@ -49,16 +49,16 @@ if "!PYTHON!"=="" (
 )
 
 :: Check required packages
-!PYTHON! -c "import cryptography, lz4" >nul 2>nul
+!PYTHON! -c "import lz4" >nul 2>nul
 if errorlevel 1 (
     echo.
     echo   Installing required Python packages...
     echo.
-    !PYTHON! -m pip install cryptography lz4
+    !PYTHON! -m pip install lz4
     if errorlevel 1 (
         echo.
         echo   ERROR: Failed to install required packages.
-        echo   Try running manually: pip install cryptography lz4
+        echo   Try running manually: pip install lz4
         echo.
         pause
         exit /b
@@ -86,24 +86,26 @@ if not exist "!PAZ!" (
     exit /b
 )
 
-:: Write permission check
-powershell -NoProfile -Command ^
-    "try{$fs=[IO.File]::Open('!PAZ!','Open','ReadWrite','Read');$fs.Close();exit 0}catch{exit 1}" 2>nul
-if errorlevel 1 (
-    echo.
-    echo   ERROR: Cannot write to game files.
-    echo.
-    echo   If you are using Xbox App / Game Pass, the game folder
-    echo   may be read-only. Try one of these fixes:
-    echo.
-    echo   1. Move the game: Xbox App ^> Crimson Desert ^> Manage ^>
-    echo      Move to a different drive
-    echo   2. Or right-click the game folder ^> Properties ^>
-    echo      uncheck "Read-only" ^> Apply to all subfolders
-    echo.
-    pause
-    exit /b
+:: Write permission check — create a temp file next to the PAZ
+echo.>"!GAMEDIR!\0010\.writetest" 2>nul
+if exist "!GAMEDIR!\0010\.writetest" (
+    del "!GAMEDIR!\0010\.writetest" >nul 2>nul
+    goto WRITEOK
 )
+echo.
+echo   ERROR: Cannot write to game files.
+echo.
+echo   If you are using Xbox App / Game Pass, the game folder
+echo   may be read-only. Try one of these fixes:
+echo.
+echo   1. Move the game: Xbox App ^> Crimson Desert ^> Manage ^>
+echo      Move to a different drive
+echo   2. Or right-click the game folder ^> Properties ^>
+echo      uncheck "Read-only" ^> Apply to all subfolders
+echo.
+pause
+exit /b
+:WRITEOK
 
 :: ============================================================
 :: MENU

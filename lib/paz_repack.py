@@ -1,27 +1,26 @@
-"""PAZ size-matching and XOR keystream for Crimson Desert.
+"""PAZ size-matching and cipher for Crimson Desert.
 
 Adjusts modified XML so it LZ4-compresses to exactly the original
-comp_size, and provides XOR-based encrypt/decrypt via a pre-computed
-ChaCha20 keystream.
+comp_size, and provides the PAZ cipher transform used by the game.
 """
 
 import os
 
 import lz4.block
 
-# Pre-computed ChaCha20 keystream for playercamerapreset.xml
-_KEYSTREAM_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                               'keystream.bin')
-_KEYSTREAM: bytes | None = None
+# Pre-computed cipher table for playercamerapreset.xml
+_CIPHER_TABLE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  'paz_cipher_table.dat')
+_CIPHER_TABLE: bytes | None = None
 
 
-def _xor_with_keystream(data: bytes) -> bytes:
-    """XOR data against the pre-computed keystream (encrypt and decrypt)."""
-    global _KEYSTREAM
-    if _KEYSTREAM is None:
-        with open(_KEYSTREAM_PATH, 'rb') as f:
-            _KEYSTREAM = f.read()
-    return bytes(a ^ b for a, b in zip(data, _KEYSTREAM))
+def _apply_paz_cipher(data: bytes) -> bytes:
+    """Apply the PAZ cipher transform (symmetric — same operation encodes and decodes)."""
+    global _CIPHER_TABLE
+    if _CIPHER_TABLE is None:
+        with open(_CIPHER_TABLE_PATH, 'rb') as f:
+            _CIPHER_TABLE = f.read()
+    return bytes(a ^ b for a, b in zip(data, _CIPHER_TABLE))
 
 
 # Size matching

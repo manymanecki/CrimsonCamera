@@ -18,7 +18,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from paz_parse import parse_pamt
-from paz_repack import _match_compressed_size, _xor_with_keystream
+from paz_repack import _match_compressed_size, _apply_paz_cipher
 import lz4.block
 
 from camera_rules import build_modifications, BASE_FOV
@@ -259,7 +259,7 @@ def _get_vanilla_xml(entry):
     backup_path = os.path.join(_backups_dir(), 'original_backup.bin')
     with open(backup_path, 'rb') as f:
         encrypted = f.read()
-    decrypted = _xor_with_keystream(encrypted)
+    decrypted = _apply_paz_cipher(encrypted)
     xml_bytes = lz4.block.decompress(decrypted, uncompressed_size=entry.orig_size)
     return xml_bytes.rstrip(b'\x00').decode('utf-8-sig')
 
@@ -268,14 +268,9 @@ def _get_vanilla_xml(entry):
 
 def _write_to_paz(entry, encrypted_bytes):
     """Write encrypted bytes to the PAZ file at the entry's offset."""
-    paz_path = entry.paz_file
-    stat_before = os.stat(paz_path)
-
-    with open(paz_path, 'r+b') as f:
+    with open(entry.paz_file, 'r+b') as f:
         f.seek(entry.offset)
         f.write(encrypted_bytes)
-
-    os.utime(paz_path, (stat_before.st_atime, stat_before.st_mtime))
 
 
 # Main operations
@@ -333,7 +328,7 @@ def install_camera_mod(game_dir, style, height, fov, steadycam, combat, distance
         f'Size mismatch: {len(compressed)} != {entry.comp_size}'
 
     print('  Encrypting...')
-    encrypted = _xor_with_keystream(compressed)
+    encrypted = _apply_paz_cipher(compressed)
 
     print('  Patching game files...')
     _write_to_paz(entry, encrypted)
