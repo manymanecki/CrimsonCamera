@@ -162,12 +162,38 @@ def _build_height_mods(height):
 
 # Centered
 
+# Sections that have OffsetByVelocity in vanilla — the lateral velocity
+# offset must be zeroed alongside RightOffset, otherwise movement still
+# pushes the camera to the right even with a centered framing.
+_CENTERED_VELOCITY_OFFSET_SECTIONS = [
+    'Player_Basic_Default_Run',
+    'Player_Basic_Default_Runfast',
+    'Player_Weapon_Default_Run',
+    'Player_Weapon_Default_RunFast',
+    'Player_Weapon_Default_RunFast_Follow',
+    'Player_Ride_Horse',
+    'Player_Ride_Horse_Run',
+    'Player_Ride_Horse_Fast_Run',
+    'Player_Ride_Horse_Dash',
+    'Player_Ride_Horse_Dash_Att',
+    'Player_Ride_Horse_Att_R',
+    'Player_Ride_Horse_Att_L',
+    'Player_Ride_Elephant',
+    'Player_Ride_Wyvern',
+    'Player_Ride_Canoe',
+    'Player_Ride_Warmachine',
+]
+
+
 def _build_centered_mods():
     mods = {}
     for section in _ALL_BASIC_SECTIONS + _WEAPON_SECTIONS + _RIDE_SECTIONS:
         for level in (2, 3, 4, 5):
             key = f'{section}/ZoomLevel[{level}]'
             mods.setdefault(key, {})['RightOffset'] = ('SET', '0.0')
+    for section in _CENTERED_VELOCITY_OFFSET_SECTIONS:
+        key = f'{section}/OffsetByVelocity'
+        mods[key] = {'OffsetLength': ('SET', '0')}
     return mods
 
 
