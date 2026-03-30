@@ -14,15 +14,48 @@ class ModificationSet:
     fov_value: int = 0
     distance_multiplier: float = 1.0
 
-
-# Height layers
-
+# Core sections — have InDoorUpOffset in vanilla, safe to modify both offsets
 _BASIC_SECTIONS = [
     'Player_Basic_Default',
     'Player_Basic_Default_Aim_Zoom',
     'Player_Basic_Default_Walk',
     'Player_Basic_Default_Run',
     'Player_Basic_Default_Runfast',
+    'Player_Basic_RopePull',
+    'Player_Basic_RopeSwing',
+    'Player_Rest',
+]
+
+# Extended sections — only UpOffset (no InDoorUpOffset in vanilla)
+_BASIC_EXTENDED_SECTIONS = [
+    'Player_Basic_ZoomLookAt',
+    'Player_Basic_Zoom',
+    'Player_Basic_PointClimb',
+    'Player_Basic_CharacterClimb',
+    'Player_Basic_PointClimb_Follow',
+    'Player_Basic_Climb',
+    'Player_Basic_Wide',
+    'Player_Basic_Wide_Action',
+    'Player_Basic_NoZoom',
+    'Player_Basic_AirBalloon',
+    'Player_Basic_Tank',
+    'Player_Basic_RailGun',
+    'Player_Basic_Cockpit',
+    'Player_Basic_GantryCrane',
+    'Player_Basic_GantryCrane_Big',
+    'Player_Basic_GantryCrane_Small',
+    'Player_Basic_FreeFall_Start',
+    'Player_Basic_FreeFall',
+    'Player_Basic_FreeFall_Lv2',
+    'Player_Basic_FreeFall_Aim',
+    'Player_Basic_Gliding',
+    'Player_Basic_Gliding_Fast',
+    'Player_Basic_Gliding_Zoom',
+    'Player_Basic_Gliding_Fall',
+    'Player_Basic_SuperJump',
+    'Player_Basic_Teleport',
+    'Player_Basic_Wagon',
+    'Player_Contemplation',
 ]
 
 _WEAPON_SECTIONS = [
@@ -31,6 +64,8 @@ _WEAPON_SECTIONS = [
     'Player_Weapon_Default_Run',
     'Player_Weapon_Default_RunFast',
     'Player_Weapon_Default_RunFast_Follow',
+    'Player_Weapon_Rush',
+    'Player_Weapon_Guard',
 ]
 
 _RIDE_SECTIONS = [
@@ -77,6 +112,7 @@ def _build_height_mods(height):
 
     vals = offsets[height]
     mods = {}
+    # Core basic + weapon: both UpOffset and InDoorUpOffset
     for section in _BASIC_SECTIONS + _WEAPON_SECTIONS:
         for level in (2, 3, 4):
             key = f'{section}/ZoomLevel[{level}]'
@@ -84,6 +120,14 @@ def _build_height_mods(height):
                 'UpOffset': ('SET', vals['UpOffset']),
                 'InDoorUpOffset': ('SET', vals['InDoorUpOffset']),
             }
+    # Extended basic: UpOffset only (no InDoorUpOffset in vanilla)
+    for section in _BASIC_EXTENDED_SECTIONS:
+        for level in (2, 3, 4):
+            key = f'{section}/ZoomLevel[{level}]'
+            mods[key] = {
+                'UpOffset': ('SET', vals['UpOffset']),
+            }
+    # Ride: UpOffset only
     for section in _RIDE_SECTIONS:
         for level in (2, 3, 4, 5):
             key = f'{section}/ZoomLevel[{level}]'
@@ -93,11 +137,13 @@ def _build_height_mods(height):
     return mods
 
 
+_ALL_BASIC_SECTIONS = _BASIC_SECTIONS + _BASIC_EXTENDED_SECTIONS
+
 # Centered layer
 
 def _build_centered_mods():
     mods = {}
-    for section in _BASIC_SECTIONS + _WEAPON_SECTIONS + _RIDE_SECTIONS:
+    for section in _ALL_BASIC_SECTIONS + _WEAPON_SECTIONS + _RIDE_SECTIONS:
         for level in (2, 3, 4, 5):
             key = f'{section}/ZoomLevel[{level}]'
             mods.setdefault(key, {})['RightOffset'] = ('SET', '0.0')
@@ -116,6 +162,7 @@ _STEADYCAM_NORMALIZE_SECTIONS = [
     'Player_Weapon_Default_RunFast_Follow',
 ]
 _STEADYCAM_IDLE_DISTANCES = {2: '3.4', 3: '6', 4: '8'}
+_STEADYCAM_IDLE_RIGHT_OFFSETS = {2: '0.5', 3: '0.8', 4: '1.1'}
 
 _STEADYCAM_MODS = {
     'Player_Basic_Default_Run/OffsetByVelocity': {
@@ -251,14 +298,6 @@ _STEADYCAM_MODS = {
     },
 }
 
-
-# Combat zoom layers
-
-_COMBAT_WEAPON_SECTIONS = _WEAPON_SECTIONS + [
-    'Player_Weapon_Rush',
-    'Player_Weapon_Guard',
-]
-
 _COMBAT_WEAPON_TARGETS = {
     'wide': {2: '5', 3: '8', 4: '10'},
     'max':  {2: '6', 3: '9.5', 4: '12'},
@@ -270,7 +309,7 @@ def _build_combat_weapon_mods(tier):
     if tier not in _COMBAT_WEAPON_TARGETS:
         return {}
     mods = {}
-    for section in _COMBAT_WEAPON_SECTIONS:
+    for section in _WEAPON_SECTIONS:
         for level, zd in _COMBAT_WEAPON_TARGETS[tier].items():
             key = f'{section}/ZoomLevel[{level}]'
             mods[key] = {'ZoomDistance': ('SET', zd)}
@@ -463,6 +502,9 @@ def build_modifications(style, height, fov, steadycam, combat, distance='default
             for level, zd in _STEADYCAM_IDLE_DISTANCES.items():
                 key = f'{section}/ZoomLevel[{level}]'
                 mods.setdefault(key, {})['ZoomDistance'] = ('SET', zd)
+            for level, ro in _STEADYCAM_IDLE_RIGHT_OFFSETS.items():
+                key = f'{section}/ZoomLevel[{level}]'
+                mods.setdefault(key, {})['RightOffset'] = ('SET', ro)
 
     if combat in _COMBAT_LOCKON_LAYERS:
         _merge(mods, _COMBAT_LOCKON_LAYERS[combat])

@@ -1,4 +1,4 @@
 backups/*
 lib/__pycache__
 lib/__pycache__/*
-_vanilla_dump.xml
+temp/
