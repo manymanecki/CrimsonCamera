@@ -14,6 +14,14 @@ class ModificationSet:
     fov_value: int = 0
     distance_multiplier: float = 1.0
 
+
+# Vanilla base FOV (from Player_Basic_Default).  Used as the normalisation
+# target for steadycam and as the engine fallback for entries that omit Fov.
+BASE_FOV = 40
+
+
+# Section lists
+
 # Core sections — have InDoorUpOffset in vanilla, safe to modify both offsets
 _BASIC_SECTIONS = [
     'Player_Basic_Default',
@@ -58,6 +66,8 @@ _BASIC_EXTENDED_SECTIONS = [
     'Player_Contemplation',
 ]
 
+_ALL_BASIC_SECTIONS = _BASIC_SECTIONS + _BASIC_EXTENDED_SECTIONS
+
 _WEAPON_SECTIONS = [
     'Player_Weapon_Default',
     'Player_Weapon_Default_Walk',
@@ -100,6 +110,19 @@ _RIDE_SECTIONS = [
 ]
 
 
+# Utilities
+
+def _merge(base, overlay):
+    """Deep-merge overlay into base (overlay wins on conflict)."""
+    for key, attrs in overlay.items():
+        if key in base:
+            base[key].update(attrs)
+        else:
+            base[key] = dict(attrs)
+
+
+# Height
+
 def _build_height_mods(height):
     """Build UpOffset/InDoorUpOffset modifications for the given height."""
     offsets = {
@@ -137,9 +160,7 @@ def _build_height_mods(height):
     return mods
 
 
-_ALL_BASIC_SECTIONS = _BASIC_SECTIONS + _BASIC_EXTENDED_SECTIONS
-
-# Centered layer
+# Centered
 
 def _build_centered_mods():
     mods = {}
@@ -150,11 +171,7 @@ def _build_centered_mods():
     return mods
 
 
-# Steadycam layer
-
-# Vanilla base FOV (from Player_Basic_Default).  Used as the normalisation
-# target for steadycam and as the engine fallback for entries that omit Fov.
-BASE_FOV = 40
+# Steadycam
 
 _STEADYCAM_NORMALIZE_SECTIONS = [
     'Player_Basic_Default_Walk',
@@ -165,10 +182,11 @@ _STEADYCAM_NORMALIZE_SECTIONS = [
     'Player_Weapon_Default_RunFast',
     'Player_Weapon_Default_RunFast_Follow',
 ]
+
 _STEADYCAM_IDLE_DISTANCES = {2: '3.4', 3: '6', 4: '8'}
 _STEADYCAM_IDLE_RIGHT_OFFSETS = {2: '0.5', 3: '0.8', 4: '1.1'}
 
-_STEADYCAM_MODS = {
+_STEADYCAM_ELEMENT_MODS = {
     'Player_Basic_Default_Walk': {
         'Fov': ('SET', str(BASE_FOV)),
     },
@@ -311,23 +329,26 @@ _STEADYCAM_MODS = {
     },
 }
 
+
+def _build_steadycam_mods():
+    """Build all steadycam modifications: FOV normalization, damping, offset stabilization."""
+    mods = {key: dict(attrs) for key, attrs in _STEADYCAM_ELEMENT_MODS.items()}
+    for section in _STEADYCAM_NORMALIZE_SECTIONS:
+        for level, zd in _STEADYCAM_IDLE_DISTANCES.items():
+            key = f'{section}/ZoomLevel[{level}]'
+            mods.setdefault(key, {})['ZoomDistance'] = ('SET', zd)
+        for level, ro in _STEADYCAM_IDLE_RIGHT_OFFSETS.items():
+            key = f'{section}/ZoomLevel[{level}]'
+            mods.setdefault(key, {})['RightOffset'] = ('SET', ro)
+    return mods
+
+
+# Combat
+
 _COMBAT_WEAPON_TARGETS = {
     'wide': {2: '5', 3: '8', 4: '10'},
     'max':  {2: '6', 3: '9.5', 4: '12'},
 }
-
-
-def _build_combat_weapon_mods(tier):
-    """Build weapon ZoomDistance pullback for the given combat tier."""
-    if tier not in _COMBAT_WEAPON_TARGETS:
-        return {}
-    mods = {}
-    for section in _WEAPON_SECTIONS:
-        for level, zd in _COMBAT_WEAPON_TARGETS[tier].items():
-            key = f'{section}/ZoomLevel[{level}]'
-            mods[key] = {'ZoomDistance': ('SET', zd)}
-    return mods
-
 
 _COMBAT_LOCKON_LAYERS = {
     'wide': {
@@ -364,7 +385,6 @@ _COMBAT_LOCKON_LAYERS = {
         'Player_Interaction_TwoTarget/ZoomLevel[4]': {
             'MaxZoomDistance': ('SET', '10'),
         },
-
         'Player_Weapon_LockOn_Non_Rotate/ZoomLevel[3]': {
             'ZoomDistance': ('SET', '9'),
         },
@@ -424,7 +444,6 @@ _COMBAT_LOCKON_LAYERS = {
         'Player_Interaction_TwoTarget/ZoomLevel[4]': {
             'MaxZoomDistance': ('SET', '10'),
         },
-
         'Player_Weapon_LockOn_Non_Rotate/ZoomLevel[3]': {
             'ZoomDistance': ('SET', '9.9'),
         },
@@ -453,10 +472,22 @@ _COMBAT_LOCKON_LAYERS = {
 }
 
 
-# Horse offset normalisation
-# Vanilla Dash has lower RightOffset than other horse states, causing a
-# visible lateral shift during speed transitions.  Normalise to match.
+def _build_combat_weapon_mods(tier):
+    """Build weapon ZoomDistance pullback for the given combat tier."""
+    if tier not in _COMBAT_WEAPON_TARGETS:
+        return {}
+    mods = {}
+    for section in _WEAPON_SECTIONS:
+        for level, zd in _COMBAT_WEAPON_TARGETS[tier].items():
+            key = f'{section}/ZoomLevel[{level}]'
+            mods[key] = {'ZoomDistance': ('SET', zd)}
+    return mods
 
+
+# Always-on fixes
+
+# Horse offset normalisation — vanilla Dash has lower RightOffset than other
+# horse states, causing a visible lateral shift during speed transitions.
 _HORSE_OFFSET_FIX = {
     'Player_Ride_Horse_Dash/ZoomLevel[2]': {
         'RightOffset': ('SET', '1.45'),
@@ -467,16 +498,7 @@ _HORSE_OFFSET_FIX = {
 }
 
 
-# Composition
-
-def _merge(base, overlay):
-    """Deep-merge overlay into base (overlay wins on conflict)."""
-    for key, attrs in overlay.items():
-        if key in base:
-            base[key].update(attrs)
-        else:
-            base[key] = dict(attrs)
-
+# Distance presets
 
 _DISTANCE_PRESETS = {
     'vclose': 0.6,
@@ -486,6 +508,8 @@ _DISTANCE_PRESETS = {
     'vfar':   1.5,
 }
 
+
+# Composition
 
 def build_modifications(style, height, fov, steadycam, combat, distance='default'):
     """Build the complete modification set from user choices.
@@ -510,14 +534,7 @@ def build_modifications(style, height, fov, steadycam, combat, distance='default
         _merge(mods, _build_centered_mods())
 
     if steadycam:
-        _merge(mods, _STEADYCAM_MODS)
-        for section in _STEADYCAM_NORMALIZE_SECTIONS:
-            for level, zd in _STEADYCAM_IDLE_DISTANCES.items():
-                key = f'{section}/ZoomLevel[{level}]'
-                mods.setdefault(key, {})['ZoomDistance'] = ('SET', zd)
-            for level, ro in _STEADYCAM_IDLE_RIGHT_OFFSETS.items():
-                key = f'{section}/ZoomLevel[{level}]'
-                mods.setdefault(key, {})['RightOffset'] = ('SET', ro)
+        _merge(mods, _build_steadycam_mods())
 
     if combat in _COMBAT_LOCKON_LAYERS:
         _merge(mods, _COMBAT_LOCKON_LAYERS[combat])

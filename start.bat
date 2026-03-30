@@ -196,13 +196,13 @@ echo   [3] Default     - No change (recommended)
 echo   [4] Far         - 125%% of default distance
 echo   [5] Very Far    - 150%% of default distance
 echo.
-set /p "S3D=  Choose [1, 2, 3, 4, 5]: "
+set /p "S3=  Choose [1, 2, 3, 4, 5]: "
 
-if "!S3D!"=="1" set "DISTANCE=vclose"& goto STEP4
-if "!S3D!"=="2" set "DISTANCE=close"& goto STEP4
-if "!S3D!"=="3" set "DISTANCE=default"& goto STEP4
-if "!S3D!"=="4" set "DISTANCE=far"& goto STEP4
-if "!S3D!"=="5" set "DISTANCE=vfar"& goto STEP4
+if "!S3!"=="1" set "DISTANCE=vclose"& goto STEP4
+if "!S3!"=="2" set "DISTANCE=close"& goto STEP4
+if "!S3!"=="3" set "DISTANCE=default"& goto STEP4
+if "!S3!"=="4" set "DISTANCE=far"& goto STEP4
+if "!S3!"=="5" set "DISTANCE=vfar"& goto STEP4
 echo   Invalid choice.
 timeout /t 2 >nul
 goto STEP3
@@ -228,11 +228,11 @@ echo   60 = Noticeably wider, no distortion
 echo   70 = Very wide, great for exploration
 echo   80 = Ultra wide, slight fisheye at edges
 echo.
-set /p "S3=  FoV value [0, or 50-100]: "
+set /p "S4=  FoV value [0, or 50-100]: "
 
-if "!S3!"=="" set "S3=0"
-set /a "FOVCHECK=!S3!" 2>nul
-if "!S3!"=="0" (
+if "!S4!"=="" set "S4=0"
+set /a "FOVCHECK=!S4!" 2>nul
+if "!S4!"=="0" (
     set "FOV=0"
     goto STEP5
 )
@@ -266,10 +266,10 @@ echo.
 echo   [Y] Yes - Smooth camera movement (recommended)
 echo   [N] No  - Keep vanilla camera sway
 echo.
-set /p "S4=  Enable Steadycam? [Y/N]: "
+set /p "S5=  Enable Steadycam? [Y/N]: "
 
-if /i "!S4!"=="Y" set "STEADYCAM=--steadycam"& goto STEP6
-if /i "!S4!"=="N" set "STEADYCAM="& goto STEP6
+if /i "!S5!"=="Y" set "STEADYCAM=--steadycam"& goto STEP6
+if /i "!S5!"=="N" set "STEADYCAM="& goto STEP6
 echo   Invalid choice.
 timeout /t 2 >nul
 goto STEP5
@@ -292,11 +292,11 @@ echo   [0] Default - No change to combat camera
 echo   [1] Wider   - More room to see enemies
 echo   [2] Maximum - Widest possible combat view
 echo.
-set /p "S5=  Combat zoom [0, 1, 2]: "
+set /p "S6=  Combat zoom [0, 1, 2]: "
 
-if "!S5!"=="0" set "COMBAT=default"& goto CONFIRM
-if "!S5!"=="1" set "COMBAT=wide"& goto CONFIRM
-if "!S5!"=="2" set "COMBAT=max"& goto CONFIRM
+if "!S6!"=="0" set "COMBAT=default"& goto CONFIRM
+if "!S6!"=="1" set "COMBAT=wide"& goto CONFIRM
+if "!S6!"=="2" set "COMBAT=max"& goto CONFIRM
 echo   Invalid choice.
 timeout /t 2 >nul
 goto STEP6

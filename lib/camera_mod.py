@@ -37,9 +37,30 @@ SUBELEMENT_TAGS = frozenset({
 FOV_SECTION_TYPES = frozenset({'TPS', 'TwoTargetLockOn'})
 
 
-
 def _parse_attrs(attrs_str):
     return dict(re.findall(r'(\w+)="([^"]*)"', attrs_str))
+
+
+def _set_attr(line, attr, value):
+    """Set an XML attribute, adding it to the tag if not already present."""
+    result, n = re.subn(rf'{attr}="[^"]*"', f'{attr}="{value}"', line, count=1)
+    return result if n else re.sub(r'(/?>)', f' {attr}="{value}"\\1', line, count=1)
+
+
+def _update_attr(line, attr, value):
+    """Update an existing XML attribute. No-op if the attribute is absent."""
+    return re.sub(rf'{attr}="[^"]*"', f'{attr}="{value}"', line, count=1)
+
+
+def _remove_attr(line, attr):
+    """Remove an XML attribute from a tag line."""
+    return re.sub(rf'\s+{attr}="[^"]*"', '', line)
+
+
+def _get_float_attr(line, attr):
+    """Extract a float-valued attribute, or None if absent."""
+    m = re.search(rf'{attr}="([^"]*)"', line)
+    return float(m.group(1)) if m else None
 
 
 def apply_modifications(xml_text, mod_set):
@@ -54,12 +75,13 @@ def apply_modifications(xml_text, mod_set):
     distance_mult = mod_set.distance_multiplier
 
     lines = xml_text.split('\n')
-    parent_stack = []
+    parent_stack = []  # [(tag, applies_fov, original_fov, skip), ...]
     result = []
 
     for line in lines:
         stripped = line.strip()
 
+        # Close tag — pop parent context
         if stripped == '</>':
             result.append(line)
             if parent_stack:
@@ -76,112 +98,84 @@ def apply_modifications(xml_text, mod_set):
         self_closing = m.group(3) == '/'
         attrs = _parse_attrs(attrs_str)
 
+        # Parent context
         parent_tag, parent_applies_fov, parent_fov, parent_skip = (
             parent_stack[-1] if parent_stack else ('', False, 0, False)
         )
 
+        # Build lookup key (ZoomLevel keys include the level number)
         if tag == 'ZoomLevel':
             level = attrs.get('Level', '?')
             key = f'{parent_tag}/ZoomLevel[{level}]' if parent_tag else f'ZoomLevel[{level}]'
         else:
             key = f'{parent_tag}/{tag}' if parent_tag else tag
 
-        # Skip entries where gameplay camera effects are disabled (cinematic/sequencer cameras)
+        # Skip cinematic/sequencer cameras (ApplyGamePlayCameraEffect="False")
         skip = parent_skip or attrs.get('ApplyGamePlayCameraEffect') == 'False'
 
         modified_line = line
 
+        # 1. Element-level attribute modifications
         if not skip and key in element_mods:
             for attr, (action, value) in element_mods[key].items():
                 if action == 'SET':
-                    if re.search(rf'{attr}="', modified_line):
-                        modified_line = re.sub(
-                            rf'{attr}="[^"]*"',
-                            f'{attr}="{value}"',
-                            modified_line, count=1,
-                        )
-                    else:
-                        modified_line = re.sub(
-                            r'(/?>)',
-                            f' {attr}="{value}"\\1',
-                            modified_line, count=1,
-                        )
+                    modified_line = _set_attr(modified_line, attr, value)
                 elif action == 'REMOVE':
-                    modified_line = re.sub(rf'\s+{attr}="[^"]*"', '', modified_line)
+                    modified_line = _remove_attr(modified_line, attr)
 
+        # 2. Static FoV override
         if fov_value > 0 and not skip:
             applies_fov = attrs.get('Type') in FOV_SECTION_TYPES
 
             if tag not in SUBELEMENT_TAGS and tag != 'ZoomLevel':
+                # Parent element — set Fov directly
                 if applies_fov:
-                    if 'Fov' in attrs:
-                        modified_line = re.sub(
-                            r'Fov="[^"]*"',
-                            f'Fov="{fov_value}"',
-                            modified_line, count=1,
-                        )
-                    else:
-                        modified_line = re.sub(
-                            r'(/?>)',
-                            f' Fov="{fov_value}"\\1',
-                            modified_line, count=1,
-                        )
+                    modified_line = _set_attr(modified_line, 'Fov', fov_value)
+
             elif tag == 'ZoomLevel' and parent_applies_fov:
                 level_num = int(attrs.get('Level', '0'))
                 if level_num < 2:
+                    # Levels 0-1 are close-up — leave untouched
                     result.append(modified_line)
                     continue
+
+                # Update FoV attributes (only where they exist in vanilla)
                 if 'InDoorFov' in attrs:
-                    modified_line = re.sub(
-                        r'InDoorFov="[^"]*"',
-                        f'InDoorFov="{fov_value}"',
-                        modified_line, count=1,
-                    )
+                    modified_line = _update_attr(
+                        modified_line, 'InDoorFov', fov_value)
                 if 'Fov' in attrs:
-                    modified_line = re.sub(
-                        r'Fov="[^"]*"',
-                        f'Fov="{fov_value}"',
-                        modified_line, count=1,
-                    )
+                    modified_line = _update_attr(
+                        modified_line, 'Fov', fov_value)
 
+                # Compensate ZoomDistance to preserve apparent framing
                 if parent_fov > 0:
-                    zd_match = re.search(r'ZoomDistance="([^"]*)"', modified_line)
-                    if zd_match:
-                        current_zd = float(zd_match.group(1))
-                        if current_zd > 0:
-                            ratio = (math.tan(math.radians(parent_fov / 2))
-                                     / math.tan(math.radians(fov_value / 2)))
-                            new_zd = round(current_zd * ratio, 2)
-                            modified_line = re.sub(
-                                r'ZoomDistance="[^"]*"',
-                                f'ZoomDistance="{new_zd}"',
-                                modified_line, count=1,
-                            )
+                    current_zd = _get_float_attr(modified_line, 'ZoomDistance')
+                    if current_zd and current_zd > 0:
+                        ratio = (math.tan(math.radians(parent_fov / 2))
+                                 / math.tan(math.radians(fov_value / 2)))
+                        new_zd = round(current_zd * ratio, 2)
+                        modified_line = _update_attr(
+                            modified_line, 'ZoomDistance', new_zd)
 
-        # Distance multiplier — scale ZoomDistance on ZoomLevel (Level >= 2)
+        # 3. Distance multiplier
         if distance_mult != 1.0 and not skip and tag == 'ZoomLevel':
             level_num = int(attrs.get('Level', '0'))
             if level_num >= 2:
-                zd_match = re.search(r'ZoomDistance="([^"]*)"', modified_line)
-                if zd_match:
-                    current_zd = float(zd_match.group(1))
-                    if current_zd > 0:
-                        new_zd = round(current_zd * distance_mult, 2)
-                        modified_line = re.sub(
-                            r'ZoomDistance="[^"]*"',
-                            f'ZoomDistance="{new_zd}"',
-                            modified_line, count=1,
-                        )
+                current_zd = _get_float_attr(modified_line, 'ZoomDistance')
+                if current_zd and current_zd > 0:
+                    new_zd = round(current_zd * distance_mult, 2)
+                    modified_line = _update_attr(
+                        modified_line, 'ZoomDistance', new_zd)
 
         result.append(modified_line)
 
+        # Update parent stack
         if tag not in SUBELEMENT_TAGS and tag != 'ZoomLevel':
             applies_fov = attrs.get('Type') in FOV_SECTION_TYPES
             if applies_fov:
-                # Re-read Fov from modified_line so element_mods (e.g. steadycam
-                # FOV normalisation) feed into the compensation ratio.
-                fov_m = re.search(r'Fov="([^"]*)"', modified_line)
-                original_fov = float(fov_m.group(1)) if fov_m else BASE_FOV
+                # Re-read Fov from the modified line so element_mods (e.g.
+                # steadycam FOV normalisation) feed into the compensation ratio
+                original_fov = _get_float_attr(modified_line, 'Fov') or BASE_FOV
             else:
                 original_fov = 0
             if not self_closing:
