@@ -22,7 +22,7 @@ from paz_parse import parse_pamt
 from paz_repack import _match_compressed_size
 import lz4.block
 
-from camera_rules import build_modifications
+from camera_rules import build_modifications, BASE_FOV
 
 
 # XML modification engine
@@ -36,9 +36,6 @@ SUBELEMENT_TAGS = frozenset({
 
 FOV_SECTION_TYPES = frozenset({'TPS', 'TwoTargetLockOn'})
 
-# Engine default FOV for entries that omit the Fov attribute (e.g.
-# Player_Ride_Horse_Run).  Derived from Player_Basic_Default Fov="40".
-DEFAULT_ENGINE_FOV = 40
 
 
 def _parse_attrs(attrs_str):
@@ -180,7 +177,13 @@ def apply_modifications(xml_text, mod_set):
 
         if tag not in SUBELEMENT_TAGS and tag != 'ZoomLevel':
             applies_fov = attrs.get('Type') in FOV_SECTION_TYPES
-            original_fov = float(attrs.get('Fov', str(DEFAULT_ENGINE_FOV))) if applies_fov else 0
+            if applies_fov:
+                # Re-read Fov from modified_line so element_mods (e.g. steadycam
+                # FOV normalisation) feed into the compensation ratio.
+                fov_m = re.search(r'Fov="([^"]*)"', modified_line)
+                original_fov = float(fov_m.group(1)) if fov_m else BASE_FOV
+            else:
+                original_fov = 0
             if not self_closing:
                 parent_stack.append((tag, applies_fov, original_fov, skip))
 

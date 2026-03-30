@@ -152,6 +152,10 @@ def _build_centered_mods():
 
 # Steadycam layer
 
+# Vanilla base FOV (from Player_Basic_Default).  Used as the normalisation
+# target for steadycam and as the engine fallback for entries that omit Fov.
+BASE_FOV = 40
+
 _STEADYCAM_NORMALIZE_SECTIONS = [
     'Player_Basic_Default_Walk',
     'Player_Basic_Default_Run',
@@ -165,6 +169,15 @@ _STEADYCAM_IDLE_DISTANCES = {2: '3.4', 3: '6', 4: '8'}
 _STEADYCAM_IDLE_RIGHT_OFFSETS = {2: '0.5', 3: '0.8', 4: '1.1'}
 
 _STEADYCAM_MODS = {
+    'Player_Basic_Default_Walk': {
+        'Fov': ('SET', str(BASE_FOV)),
+    },
+    'Player_Basic_Default_Run': {
+        'Fov': ('SET', str(BASE_FOV)),
+    },
+    'Player_Basic_Default_Runfast': {
+        'Fov': ('SET', str(BASE_FOV)),
+    },
     'Player_Basic_Default_Run/OffsetByVelocity': {
         'OffsetLength': ('SET', '0'),
     },
