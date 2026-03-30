@@ -2,4 +2,5 @@ backups/*
 lib/__pycache__
 lib/__pycache__/*
 temp/
+gamepath.txt
 CLAUDE.md
