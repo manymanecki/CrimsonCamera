@@ -79,8 +79,8 @@ def apply_modifications(xml_text, mod_set):
         self_closing = m.group(3) == '/'
         attrs = _parse_attrs(attrs_str)
 
-        parent_tag, parent_applies_fov, parent_fov = (
-            parent_stack[-1] if parent_stack else ('', False, 0)
+        parent_tag, parent_applies_fov, parent_fov, parent_skip = (
+            parent_stack[-1] if parent_stack else ('', False, 0, False)
         )
 
         if tag == 'ZoomLevel':
@@ -89,9 +89,12 @@ def apply_modifications(xml_text, mod_set):
         else:
             key = f'{parent_tag}/{tag}' if parent_tag else tag
 
+        # Skip entries where gameplay camera effects are disabled (cinematic/sequencer cameras)
+        skip = parent_skip or attrs.get('ApplyGamePlayCameraEffect') == 'False'
+
         modified_line = line
 
-        if key in element_mods:
+        if not skip and key in element_mods:
             for attr, (action, value) in element_mods[key].items():
                 if action == 'SET':
                     if re.search(rf'{attr}="', modified_line):
@@ -109,7 +112,7 @@ def apply_modifications(xml_text, mod_set):
                 elif action == 'REMOVE':
                     modified_line = re.sub(rf'\s+{attr}="[^"]*"', '', modified_line)
 
-        if fov_value > 0:
+        if fov_value > 0 and not skip:
             applies_fov = attrs.get('Type') in FOV_SECTION_TYPES
 
             if tag not in SUBELEMENT_TAGS and tag != 'ZoomLevel':
@@ -159,7 +162,7 @@ def apply_modifications(xml_text, mod_set):
                             )
 
         # Distance multiplier — scale ZoomDistance on ZoomLevel (Level >= 2)
-        if distance_mult != 1.0 and tag == 'ZoomLevel':
+        if distance_mult != 1.0 and not skip and tag == 'ZoomLevel':
             level_num = int(attrs.get('Level', '0'))
             if level_num >= 2:
                 zd_match = re.search(r'ZoomDistance="([^"]*)"', modified_line)
@@ -179,7 +182,7 @@ def apply_modifications(xml_text, mod_set):
             applies_fov = attrs.get('Type') in FOV_SECTION_TYPES
             original_fov = float(attrs.get('Fov', str(DEFAULT_ENGINE_FOV))) if applies_fov else 0
             if not self_closing:
-                parent_stack.append((tag, applies_fov, original_fov))
+                parent_stack.append((tag, applies_fov, original_fov, skip))
 
     return '\n'.join(result)
 
