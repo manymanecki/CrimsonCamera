@@ -530,11 +530,11 @@ def build_modifications(style, height, fov, steadycam, combat, distance='default
     _merge(mods, _HORSE_OFFSET_FIX)
     _merge(mods, _build_height_mods(height))
 
-    if style == 'centered':
-        _merge(mods, _build_centered_mods())
-
     if steadycam:
         _merge(mods, _build_steadycam_mods())
+
+    if style == 'centered':
+        _merge(mods, _build_centered_mods())
 
     if combat in _COMBAT_LOCKON_LAYERS:
         _merge(mods, _COMBAT_LOCKON_LAYERS[combat])
