@@ -369,9 +369,7 @@ def restore_camera(game_dir):
             os.remove(meta_path)
         return {'status': 'stale_backup'}
 
-    print('  Restoring original camera...')
     _write_to_paz(entry, backup_data)
-    print('  Done! Camera restored to vanilla.')
     return {'status': 'ok'}
 
 

@@ -78,7 +78,7 @@ if not exist "!PAZ!" (
     echo   This mod folder must be placed inside the Crimson Desert
     echo   game directory, for example:
     echo.
-    echo     Crimson Desert\CrimsonCamera\install.bat
+    echo     Crimson Desert\CrimsonCamera\start.bat
     echo.
     echo   The "0010" folder should be next to this mod folder.
     echo.
@@ -367,8 +367,8 @@ echo  ============================================================
 echo.
 echo   Launch the game to see your new camera!
 echo.
-echo   To change settings: run install.bat again
-echo   To restore vanilla: run uninstall.bat or choose [R]
+echo   To change settings: run start.bat again
+echo   To restore vanilla: choose [R] on the first screen
 echo.
 pause
 goto STEP1
